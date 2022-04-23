@@ -1,0 +1,375 @@
+---
+title: "Untitled"
+output: html_document
+date: '2022-04-23'
+---
+```{r echo=TRUE}
+#************************#
+#!!! VERY IMPORTANT !!!
+#************************#
+# Please, replace the "2" inside set.seed() with your
+# unique seed
+set.seed(74830)
+
+#************************#
+#!!! VERY IMPORTANT !!!
+#
+#  DON'T MODIFY THE LINES
+#  IN THE REMAINING OF 
+#  THIS R CHUNK
+#
+#************************#
+# Loading data
+load("lts0.Rda")
+
+# Extracting time series
+idx1 <- sample(1:500,size=4,replace=FALSE)
+idx2 <- sample(501:1000,size=3,replace=FALSE)
+idx3 <- sample(1001:1500,size=3,replace=FALSE)
+tser01 <- lts0[[idx1[1]]]
+tser02 <- lts0[[idx1[2]]]
+tser03 <- lts0[[idx1[3]]]
+tser04 <- lts0[[idx1[4]]]
+tser05 <- lts0[[idx2[1]]]
+tser06 <- lts0[[idx2[2]]]
+tser07 <- lts0[[idx2[3]]]
+tser08 <- lts0[[idx3[1]]]
+tser09 <- lts0[[idx3[2]]]
+tser10 <- lts0[[idx3[3]]]
+
+# Test you've got the time series in the workspace
+par(mfrow=c(2,2))
+plot(tser01)
+plot(tser02)
+plot(tser03)
+plot(tser04)
+par(mfrow=c(3,1))
+plot(tser05)
+plot(tser06)
+plot(tser07)
+par(mfrow=c(3,1))
+plot(tser08)
+plot(tser09)
+plot(tser10)
+
+# Back to one plot per window
+par(mfrow=c(1,1))
+```
+
+**SOLUTION**
+
+
+```{r}
+#setup chunk 
+library(astsa)
+library(tseries)
+
+#Initial checks, stationary?- KS test, stl- seasonal/trend component - elimiate (differencing or repeated differencing), [note dont't want to over difference]
+
+#not that pacf starts at lag 1 while acf starts at lag 0
+
+#can add in curves on AR 1 processes to back up selected model (W23 arima simulations)
+```
+
+
+## TS 1-4
+
+
+```{r}
+#To initially investigate what ARIMA models ACF/PACF with d=1 would look like create some references
+
+arima111 <- arima.sim(n=10000,model=list(order=c(1,1,1),ma=c(0.8),ar=c(0.5)),sd=1)
+acf(arima111)
+pacf(arima111)
+
+arima211 <- arima.sim(n=10000,model=list(order=c(2,1,1),ma=c(0.6),ar=c(0.5,0.3)),sd=1)
+acf(arima211)
+pacf(arima211)
+
+arima212 <- arima.sim(n=10000,model=list(order=c(2,1,2),ma=c(0.8,0.2),ar=c(0.5,0.3)),sd=1)
+acf(arima212)
+pacf(arima212)
+# from above plots ius apparent that due to non stationarity of process when d=1 the correlgram has non decaying spikes for tau=integers thus can use this to identify time series with d=1 in first 4 time series
+
+
+#adf.test(arima212)
+
+#perform normal dickey-fuller test (k=0) as only want to know if 1st difference is unit root (as told d=0 or 1)
+#p-value significant so reject null hypothesis of the presence of a unit root and therefore the series is stationary (ie d=0 as if d=1 the process is non-stationary)
+```
+
+
+#TS 1
+```{r}
+#Start by plotting the 1st time series (of 300 obs)
+plot(tser01)
+
+#initial observation of the ts object: it doesn't look to have a trend or seasonal component, the variation doesn't appear to change as time increased thus appears the ts object is not heteroscedastic
+
+#ks test, spit in half to examine hetroscedasticity
+x<-tser01[1:150]
+y<-tser01[151:300]
+ks.test(x,y)
+#very high p-value backing up our original claims from observation that ts is not heteroscedastic and no trend present therefore is stationary
+
+#1. Identification of likely p,q,d values (use final differenceing to take to make stationary- to give d)
+
+acf(tser01)
+#only correlated at lag equal to zero 
+pacf(tser01)
+#partial not significant (no partial correlation)
+
+#initial analysis suggests object is white noise as only significant spike of acf is at tau=0 and pacf has no significant spikes at any lag
+#thus try fitting a ARIMA(0,0,0) model
+
+fit_ts1<-arima(tser01,order=c(0,0,0))
+print(fit_ts1)
+
+#no point in creating CI as no alpha or beta to estimate
+
+#further dignostics
+tsdiag(fit_ts1)
+
+#no trends/patterns observed in the residuals
+#no evidence of autocorrelation in the residuals
+#consistently high LB p-values
+#therefore no evidence that theres still some time structure we haven't modelled
+
+#final check 
+lag.plot(resid(fit_ts1),do.lines=FALSE)
+#observe a globular cloud of points, thus data uncorrelated 
+
+#thus conclude that the time series is Gaussian random noise ie ARIMA(0,0,0) (white noise process)
+```
+
+#TS 2
+```{r}
+#Start by plotting the time series
+plot(tser02)
+#By observation of the TS I note that there does not appear to be any trend, seaosnality or heteroscedasicity
+
+#ks test, spit in half to examine hetroscedasticity
+x<-tser02[1:150]
+y<-tser02[151:300]
+ks.test(x,y)
+#no heteroscedasity from kolomogov-smearnov test
+
+#1. Identification of likely p,q,d values
+#use correlograms 
+par(mfrow=c(2,1))
+acf(tser02)
+pacf(tser02)
+#acf cuts off at 3 and pacf decays exponentially indicating a MA(2) process
+
+#2. Parameter esitmation 
+#I fit a model using the the p,q,d values above (00,2) to estimate the parameters (beta)
+fit_ts2<- arima(tser02,order=c(0,0,2))
+print(fit_ts2)
+#creating 95% CI for beta 1
+se_1<- sqrt(fit_ts2$var.coef[1,1])
+print(c(fit_ts2$coef[1]-2*se_1,fit_ts2$coef[1]+2*se_1))
+#beta 1 significantly different from 0
+
+#beta 2 CI
+se_2<- sqrt(fit_ts2$var.coef[2,2])
+print(c(fit_ts2$coef[2]-2*se_2,fit_ts2$coef[2]+2*se_2))
+#beta significantly different from 0 so 95% sure
+
+#further dignostics
+tsdiag(fit_ts2) 
+#note that p-values of 2,3,4 and 5 are significant in Ljung-Box statistic which gives evidence that our model may be incorrect
+
+#Thus I create a new model assuming model looking back at the acf and pacf I note that perhaps the ACF is exhibiting sinisudal dampening and thus we have a ARMA process, I start with a p=1 and q=1 process model 
+
+
+fit_ts2_2<- arima(tser02,order=c(1,0,1))
+print(fit_ts2_2)
+
+#creating 95% CI for alpha_1
+se_1 <- sqrt(fit_ts2_2$var.coef[1,1])
+print(c(fit_ts2_2$coef[1]-2*se_1,fit_ts2_2$coef[1]+2*se_1))
+#alpha significantly different from 0
+
+#CI for beta_1
+se_2 <- sqrt(fit_ts2_2$var.coef[2,2])
+print(c(fit_ts2_2$coef[2]-2*se_2,fit_ts2_2$coef[2]+2*se_2))
+#alpha significantly different from 0
+
+tsdiag(fit_ts2_2)
+#diagnostics look good: no pattern in residuals, no autocorrelation of residuals and LB p-values all high
+
+#creating several higher order models to compare against p=1 and q=1 model
+
+#try a p=1, q=2 model
+fit_ts2_3<- arima(tser02,order=c(1,0,2))
+#creating 95% CI for alpha/beta's
+#alpha_1 CI
+se_1 <- sqrt(fit_ts2_3$var.coef[1,1])
+print(c(fit_ts2_3$coef[1]-2*se_1,fit_ts2_3$coef[1]+2*se_1))
+#significantly different from 0
+
+#beta_1 CI
+se_2 <- sqrt(fit_ts2_3$var.coef[2,2])
+print(c(fit_ts2_3$coef[2]-2*se_2,fit_ts2_3$coef[2]+2*se_2))
+#significantly different from 0
+
+#beta_2 CI
+se_3 <- sqrt(fit_ts2_3$var.coef[3,3])
+print(c(fit_ts2_3$coef[3]-2*se_3,fit_ts2_3$coef[3]+2*se_3))
+#not significantly different from 0 as CI includes 0 thus TS shouldn't have q=2
+
+
+# p=2, q=1 model
+fit_ts2_4<- arima(tser02,order=c(2,0,1))
+
+#creating CI's
+#creating 95% CI for alpha_1
+se_1 <- sqrt(fit_ts2_4$var.coef[1,1])
+print(c(fit_ts2_4$coef[1]-2*se_1,fit_ts2_4$coef[1]+2*se_1))
+#alpha significantly different from 0
+
+#creating 95% CI for alpha_2
+se_2 <- sqrt(fit_ts2_4$var.coef[2,2])
+print(c(fit_ts2_4$coef[2]-2*se_2,fit_ts2_4$coef[2]+2*se_2))
+#alpha 2 not significantly different from 0 thus p=1 not 2 so reject this model
+
+#final look at residuals of ARIMA(1,0,1) model
+lag.plot(resid(fit_ts2_2),do.lines=FALSE)
+#globular smattering of points thus white noise
+
+
+#As higher order models have non significant higher order terms conclude that ARIMA(1,0,1) is the correct model with a alpha_1 estimated to be -0.5 and beta_1 to be -0.6 (1.d.p.)
+```
+
+##TS 3
+```{r}
+plot(tser03)
+
+x<-tser03[1:150]
+y<-tser03[151:300]
+ks.test(x,y)
+#no hetroscedasity or trend observed (as p-value high)
+
+#1. Identification of likely p,q,d values
+
+#plotting correlograms 
+acf(tser03)
+#cuts off after lag of 2
+pacf(tser03)
+#could be decaying however lag increases from 1 to 2 
+#initially fit a MA(2) model to the data
+
+fit_ts3<- arima(tser03,order=c(0,0,2))
+print(fit_ts3)
+#creating 95% CI for beta 1
+se_1<- sqrt(fit_ts3$var.coef[1,1])
+print(c(fit_ts3$coef[1]-2*se_1,fit_ts3$coef[1]+2*se_1))
+#beta 1 significantly different from 0
+
+#beta 2 CI
+se_2<- sqrt(fit_ts3$var.coef[2,2])
+print(c(fit_ts3$coef[2]-2*se_2,fit_ts3$coef[2]+2*se_2))
+#beta 2 not different from 0 as included in the 95% CI (evidence q=1 instead)
+
+#further dignostics
+tsdiag(fit_ts3) 
+#also note that the residuals could be correlated as value at lag 2 is significant and p-values at lag 2 and greater are also significant 
+
+#thus conclude current model is incorrect and needs to be updated
+#assume ARMA model and start with p=1 and q=1
+fit_ts3_2<- arima(tser03,order=c(1,0,1))
+tsdiag(fit_ts3_2)
+#model still incorrect with autocorrelation at lag 2 
+
+#try p=2, q=1
+fit_ts3_3<- arima(tser03,order=c(2,0,1))
+tsdiag(fit_ts3_3)
+#all diagnostics look good (no patterns in residuals or autocorrelation) and LB test has high p-values
+
+print(fit_ts3_3)
+#create CI's
+#CI for alpha 1
+se_1<- sqrt(fit_ts3_3$var.coef[1,1])
+print(c(fit_ts3_3$coef[1]-2*se_1,fit_ts3_3$coef[1]+2*se_1))
+#alpha 1 not significantly different from 0
+
+#CI for alpha 2
+se_2<- sqrt(fit_ts3_3$var.coef[2,2])
+print(c(fit_ts3_3$coef[2]-2*se_2,fit_ts3_3$coef[2]+2*se_2))
+#alpha 2 significantly different from 0
+
+#CI for beta 1
+se_3<- sqrt(fit_ts3_3$var.coef[3,3])
+print(c(fit_ts3_3$coef[3]-2*se_3,fit_ts3_3$coef[3]+2*se_3))
+#beta 1 significantly different from 0
+
+#now also create a p=2, q=2 model to compare against
+fit_ts3_4<-arima(tser03,order=c(2,0,2))
+#check if beta_2 term is significant
+#CI for beta 2
+se_4<- sqrt(fit_ts3_4$var.coef[4,4])
+print(c(fit_ts3_4$coef[4]-2*se_4,fit_ts3_4$coef[4]+2*se_4))
+#not significantly different from 0 so reject this model
+
+lag.plot(resid(fit_ts3_3),do.lines=FALSE)
+#globualr smattering of residuals
+
+#conclude time series is a ARIMA(2,0,1) process with alpha_1=0, alpha_2=-0.3 and beta_1=-0.7
+```
+
+## TS 4
+```{r}
+plot(tser04)
+
+x<-tser04[1:150]
+y<-tser04[151:300]
+ks.test(x,y)
+#no hetroscedasity or trend observed (as p-value high)
+
+#correlograms
+acf(tser04)
+#cuts off after lag 2
+pacf(tser04)
+#sinesdiual dampening perhaps?
+
+#try a MA(2) process to start with
+fit_ts4<- arima(tser04,order=c(0,0,2))
+
+tsdiag(fit_ts4)
+#diagnostics look good
+
+#construct CI's
+#CI for beta_1
+se_1<- sqrt(fit_ts4$var.coef[1,1])
+print(c(fit_ts4$coef[1]-2*se_1,fit_ts4$coef[1]+2*se_1))
+#significantly different from 0
+
+#CI for beta_2
+se_2<- sqrt(fit_ts4$var.coef[2,2])
+print(c(fit_ts4$coef[2]-2*se_2,fit_ts4$coef[2]+2*se_2))
+#significantly different from 0
+
+lag.plot(resid(fit_ts4),do.lines=FALSE)
+#globular smattering
+
+print(fit_ts4)
+#conclude TS is a ARMIA(0,0,2) process with beta_1=-0.3 and beta_2=0.2
+```
+
+
+
+# TS 5-7
+Note can try and plot curve ontop of the ts to show have correct period (in simulations and autocorrelations)
+
+## TS 5
+```{r}
+plot(tser05)
+#evidence of seasonality and trend that need to be removed 
+
+acf(tser05)
+#acf slowly decreases suggesting a trend (as we observed in the plot) - [need to take first differece to eliminate this]
+
+#finding the period for the seasonality- we are told that the seasonality is 12*(nfreq)*(nyears)
+acf(tser05,lag.max = 300)
+```
+
