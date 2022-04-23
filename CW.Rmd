@@ -361,15 +361,299 @@ print(fit_ts4)
 # TS 5-7
 Note can try and plot curve ontop of the ts to show have correct period (in simulations and autocorrelations)
 
-## TS 5
+## TS 5 need to update (SD too high)
 ```{r}
 plot(tser05)
-#evidence of seasonality and trend that need to be removed 
+#evidence of seasonality and trend that need to be removed to analysis the stationary component
+#288 observations in ts and 6 periods implies 6 years thus number of obs per month (nfreq) is 4
 
-acf(tser05)
-#acf slowly decreases suggesting a trend (as we observed in the plot) - [need to take first differece to eliminate this]
+#adding seasonality to the ts object
+ts5<-ts(tser05[1:288],start=0,end=(6-1/48),frequency=48)
+#stl decomposition
+plot(stl(ts5,s.window="periodic"))
+#the seasonality appears to of been captured well in the stl plot
 
-#finding the period for the seasonality- we are told that the seasonality is 12*(nfreq)*(nyears)
-acf(tser05,lag.max = 300)
+#to remove the trend and seasonality we take a difference at lag 48 (the period of the ts) and at lag 1 to remove the trend
+t_ts5<-diff(diff(tser05),lag=48)
+plot(t_ts5)
+
+acf(t_ts5)
+acf(t_ts5,lag.max=300)
+#most of the seasonality and trend appear to of been removed
+#ts appears stationary now so can begin analysis of ts
+
+pacf(t_ts5)
+#acf cuts off after lag 2 and pacf decays sinasudally, so propose using MA(2)
+
+#try a MA(2) process to start with
+fit_ts5<- arima(t_ts5,order=c(0,0,2))
+
+tsdiag(fit_ts5)
+#not a good fit
+
+#try a ARMA model instead
+#start with p=1, q=1
+fit_ts5_2<- arima(t_ts5,order=c(1,0,1))
+tsdiag(fit_ts5_2)
+#not good fit, autocorrelation of residuals and LB p-values significant for lags 2 and greater
+
+#p=1, q=2 model
+fit_ts5_3<- arima(t_ts5,order=c(1,0,2))
+print(fit_ts5_3)
+#model has standard deviation of 4.08 therefore is out of the bounds
+
+#try p=2, q=2 model
+fit_ts5_4<- arima(t_ts5,order=c(2,0,2))
+print(fit_ts5_4)
+#model standard deviation still out of bounds
+
+#try p=2, q=3 model
+fit_ts5_5<- arima(t_ts5,order=c(2,0,3))
+print(fit_ts5_5)
+
+fit_ts5_5<- arima(t_ts5,order=c(3,0,3))
+print(fit_ts5_5)
+
+
+
+
+
+
+
+
+#check CI's
+#CI for alpha 1
+se_1<- sqrt(fit_ts5_3$var.coef[1,1])
+print(c(fit_ts5_3$coef[1]-2*se_1,fit_ts5_3$coef[1]+2*se_1))
+#alpha 1 significantly different from 0
+
+#CI for beta 1
+se_2<- sqrt(fit_ts5_3$var.coef[2,2])
+print(c(fit_ts5_3$coef[2]-2*se_2,fit_ts5_3$coef[2]+2*se_2))
+#beta 1 significantly different from 0
+
+#CI for beta 2
+se_3<- sqrt(fit_ts5_3$var.coef[3,3])
+print(c(fit_ts5_3$coef[3]-2*se_3,fit_ts5_3$coef[3]+2*se_3))
+#beta 2 significantly different from 0
+
+#check that higher order model p=2, q=2 isn't better
+fit_ts5_4<- arima(t_ts5,order=c(2,0,2))
+print(fit_ts5_4)
+tsdiag(fit_ts5_4)
+##check CI's
+#CI for alpha 2
+se_2<- sqrt(fit_ts5_4$var.coef[2,2])
+print(c(fit_ts5_4$coef[2]-2*se_2,fit_ts5_4$coef[2]+2*se_2))
+#not significantly different from zero therefore q=1 not 2
+
+lag.plot(resid(fit_ts5_3),do.lines=FALSE)
+#globular smattering
+
+print(fit_ts5_3)
+#once removed seasonailty and trend the TS is a ARMIA(1,0,2) process with alpha=-0.2 and beta_1=-0.77 abnd beta_2=0.93
+
+sqrt(16.66)
 ```
+## TS 6
+```{r}
+plot(tser06)
+#appears to be trend so take difference
+#take differences until obvious trends disappear
+
+plot(diff(tser06))
+#still clearly not stationary so take difference again
+plot(diff(diff(tser06)))
+#appears to be stationary now look at acf to see if stationary
+
+t_ts6<-diff(diff(tser06))
+#correograms
+acf(t_ts6)
+pacf(t_ts6)
+#acf cuts off after 1st lag
+#pacf appears to be sinesidual decay
+#thus appears to be a MA(1) process 
+
+#fit ARIMA(0,0,1) model
+fit_ts6<- arima(t_ts6,order=c(0,0,1))
+tsdiag(fit_ts6)
+# not fit p value low and auto correlations of the residuals
+
+#try p=1, q=1 model
+fit_ts6_2<- arima(t_ts6,order=c(1,0,1))
+tsdiag(fit_ts6_2)
+#fit not good
+
+#try p=1, q=2 model
+fit_ts6_3<- arima(t_ts6,order=c(1,0,2))
+tsdiag(fit_ts6_3)
+#fit looks good
+fit_ts6_3$sigma2
+#sd of 3 within bounds
+
+
+#look at CI's of parameters
+#CI for alpha 1
+se_1<- sqrt(fit_ts6_3$var.coef[1,1])
+print(c(fit_ts6_3$coef[1]-2*se_1,fit_ts6_3$coef[1]+2*se_1))
+#alpha 1 significantly different from 0
+
+#CI for beta 1
+se_2<- sqrt(fit_ts6_3$var.coef[2,2])
+print(c(fit_ts6_3$coef[2]-2*se_2,fit_ts6_3$coef[2]+2*se_2))
+#beta 1 significantly different from 0
+
+#CI for beta 2
+se_3<- sqrt(fit_ts6_3$var.coef[3,3])
+print(c(fit_ts6_3$coef[3]-2*se_3,fit_ts6_3$coef[3]+2*se_3))
+#beta 2 significantly different from 0
+
+#check against higher order models
+#p=2, q=2 model
+fit_ts6_4<- arima(t_ts6,order=c(2,0,2))
+tsdiag(fit_ts6_4)
+print(fit_ts6_4)
+#sd within bounds and model diagnostics good
+
+#CI for alpha 2
+se_2<- sqrt(fit_ts6_4$var.coef[2,2])
+print(c(fit_ts6_4$coef[2]-2*se_2,fit_ts6_4$coef[2]+2*se_2))
+#not significantly different from zero so ignore higher order AR terms
+
+#p=1, q=3 model
+fit_ts6_5<- arima(t_ts6,order=c(1,0,3))
+tsdiag(fit_ts6_5)
+print(fit_ts6_5)
+#sigma within range and model diagnostics good
+
+#check CI for beta 3
+se_4<- sqrt(fit_ts6_5$var.coef[4,4])
+print(c(fit_ts6_5$coef[4]-2*se_4,fit_ts6_5$coef[4]+2*se_4))
+#CI includes zero therefore no third beta term in model
+
+#thus conlucde that ts is a ARIMA(1,1,2) (as had to take 2 differences) with no seasonailty component but a trend component
+```
+
+
+## TS 7
+
+```{r}
+library(tidyverse)
+tser07%>%
+  ts(freq=)
+  decompose()
+```
+
+
+```{r}
+plot(tser07)
+#appears to have seasonality but no trend
+#could there be 2 seasonal trends as seems to oscillate up and down in a period of 2
+
+tser07%>%
+  ts(freq=48)%>%
+  tail(12*4*4)%>%
+  decompose()
+
+#might have 4 periods thus 4 observations per month
+
+#adding seasonality to the ts object
+ts7<-ts(tser07[1:192],start=0,end=(4-1/48),frequency=48)
+#stl decomposition
+plot(stl(ts7,s.window="periodic"))
+
+#assuming 3.5 periods?
+
+plot(diff(tser07,lag = 48))
+
+
+
+```
+## TS 8
+```{r}
+plot(tser08)
+#appears to be a polynomial trend (take difference twice to remove) and may be some seasonality in it
+
+#take 1st difference
+plot(diff(tser08))
+#appears to of removed the trend (check with acf toi make sure trend wasn't higher order polynomial)
+acf(diff(tser08))
+#no slow decaying spikes so trend appears to of been removed (sinisudal decay to zero)
+pacf(diff(tser08))
+#only a spike at one cuts off 
+#thus appears after taking difference we have an AR(1) process
+
+#fit the model
+t_ts8<-diff(tser08)
+fit_ts8<- arima(t_ts8,order=c(1,0,0))
+tsdiag(fit_ts8)
+#all plots look good
+print(fit_ts8)
+#SD of 1 so within range
+
+#check CI's
+#CI for alpha 1
+se_1<- sqrt(fit_ts8$var.coef[1,1])
+print(c(fit_ts8$coef[1]-2*se_1,fit_ts8$coef[1]+2*se_1))
+#alpha 1 significantly different from 0
+
+#check higher order models
+fit_ts8_2<- arima(t_ts8,order=c(1,0,1))
+tsdiag(fit_ts8_2)
+print(fit_ts8_2)
+#CI for beta 1
+se_1<- sqrt(fit_ts8_2$var.coef[2,2])
+print(c(fit_ts8_2$coef[2]-2*se_1,fit_ts8_2$coef[2]+2*se_1))
+
+
+lag.plot(resid(fit_ts8),do.lines=FALSE)
+#looks like a globualr smattering so happy with model overall
+```
+```{r}
+plot(tser09)
+#appears that it could be a polynomial trend so take difference twice and see if we have a sationary series
+
+
+acf(diff(tser09))
+
+t_ts9<-diff(diff(tser09))
+acf(t_ts9)
+#appears to now be a stationary time series
+pacf(t_ts9)
+#acf cuts off after 0 lag and pacf might be not significant
+
+#try fitting a ARIMA(0,0,0) model
+
+fit_test<-arima(t_ts9,order=c(1,0,2))
+tsdiag(fit_test)
+
+fit_test<-arima(t_ts9,order=c(2,0,2))
+tsdiag(fit_test)
+
+
+plot(tser09,ylim=c(0,300),xlim=c(0,40))
+
+
+```
+
+```{r}
+plot(tser10)
+#time series appears to be heteroscedastic
+x<-tser10[1:50]
+y<-tser10[51:100]
+ks.test(x,y)
+#ks test identifiers it as not heteroscedastic (no seasonal trend and from same ts)
+
+#does appear to be a regular pattern in the ts with the size increasing and decreasing regularly with 4 total periods
+
+#taking lag of 25 (size of period does appear of the reduced affect of any periodicity)
+plot(diff(tser10,lag=25))
+
+#ts does not appear to have any obvious seasonality o
+
+acf(tser10)
+pacf(tser10)
+```
+
+
 
