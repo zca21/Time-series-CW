@@ -361,6 +361,18 @@ print(fit_ts4)
 # TS 5-7
 Note can try and plot curve ontop of the ts to show have correct period (in simulations and autocorrelations)
 
+```{r}
+plot(tser05)
+ts5<-ts(tser05[1:288],start=0,end=(6-1/48),frequency=48)
+#stl decomposition
+plot(stl(ts5,s.window="periodic"))
+#still appears to be some periodicity in the data
+
+t_ts5<-diff(diff(tser05),lag=48)
+plot(t_ts5)
+```
+
+
 ## TS 5 need to update (SD too high)
 ```{r}
 plot(tser05)
@@ -538,17 +550,32 @@ print(c(fit_ts6_5$coef[4]-2*se_4,fit_ts6_5$coef[4]+2*se_4))
 ## TS 7
 
 ```{r}
-library(tidyverse)
-tser07%>%
-  ts(freq=)
-  decompose()
-```
-
-
-```{r}
+#nobs=192, therefore 16=nfreq*nyears 
 plot(tser07)
-#appears to have seasonality but no trend
-#could there be 2 seasonal trends as seems to oscillate up and down in a period of 2
+#appears to be a period of 4 therefore 4 observations per month (nfreq=4) therefore frequency of ts is 48
+
+#adding seasonality to the ts object
+ts7<-ts(tser07[1:192],start=0,end=(4-1/48),frequency=48)
+#stl decomposition
+plot(stl(ts7,s.window="periodic"))
+
+
+tmp <- stl(ts7,s.window="periodic")
+plot(tmp$time.series[,3])
+#random part after removing seasonality and trend does not appear stationary
+acf(diff(tser07,lag=48))
+#on checking the acf does not decay quickly thus process is not a stationary yet
+
+#we note that the time series appears to exhibt another cycle as we can only have one seasonal component hypothesis that perhaps there is a trend of polynomial order 2 causing this
+
+plot(diff(diff(tmp$time.series[,3])))
+
+
+
+plot(diff(tmp$time.series[,3],lag=5))
+#does now appear better (2 seasonal components of )
+
+plot(diff(tser07))
 
 tser07%>%
   ts(freq=48)%>%
@@ -567,7 +594,13 @@ plot(stl(ts7,s.window="periodic"))
 plot(diff(tser07,lag = 48))
 
 
+plot(diff(tser07,lag=5))
 
+plot(diff(diff(tser07,lag=4),lag=48))
+plot(diff(diff(tser07,lag=5),lag=48))
+plot(diff(diff(tser07),lag=48))
+
+plot(diff(tser07,lag=13))
 ```
 ## TS 8
 ```{r}
@@ -608,7 +641,14 @@ print(c(fit_ts8_2$coef[2]-2*se_1,fit_ts8_2$coef[2]+2*se_1))
 
 lag.plot(resid(fit_ts8),do.lines=FALSE)
 #looks like a globualr smattering so happy with model overall
+
+
+#test out taking second differnce instead
+t2_ts8<-diff(diff(t_ts8))
+plot(t2_ts8)
 ```
+
+
 ```{r}
 plot(tser09)
 #appears that it could be a polynomial trend so take difference twice and see if we have a sationary series
