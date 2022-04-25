@@ -1,9 +1,9 @@
 ---
-title: "Untitled"
+title: "MA30085 Coursework"
 output: html_document
 date: '2022-04-23'
 ---
-```{r,echo=F}
+```{r,include=F}
 #************************#
 #!!! VERY IMPORTANT !!!
 #************************#
@@ -423,7 +423,7 @@ Constructing 95% confidence intervals for the parameters of the model gives the 
 tsdiag(fit_ts4)
 #diagnostics look good
 ```
-All model diagnostics plots look good with no patterns in residuals, no evidence of autocorrelations between residuals and p-values for Ljung-Box statistic beign consistently high.
+All model diagnostics plots look good with no patterns in residuals, no evidence of autocorrelations between residuals and p-values for Ljung-Box statistic being consistently high.
 
 Trying ARMA models to compare against as the ACF could be considered to be exhibiting sinusoidal dampening.
 
@@ -517,134 +517,122 @@ From the above simulations I note that ARIMA processes with $d=2$ when plot appe
 ```{r}
 plot(tser05)
 ```
-Viewing the plot for the fifth time series it is apprent that there is a seasonal and trend component to the time series that needs to be dealt with before trying the analyses and fit a model to the data. Looking at the plot there appears to be 6 periods, therefore if 1 period is representing one year there must be 4 observations per month, as there is 288 observations in total and $288=12*6*4$ therefore I update the time series object to have this periodicity.
+Viewing the plot for the fifth time series it is apparent that there is a seasonal and possible trend component to the time series that needs to be dealt with before trying the analyses and fit a model to the data. Looking at the plot there appears to be 6 periods, therefore if 1 period is representing one year there must be 4 observations per month, as there is 288 observations in total and $288=12*6*4$ therefore I update the time series object to have this periodicity.
 
 ```{r}
 ts5<-ts(tser05[1:288],start=0,end=(6-1/48),frequency=48)
 #stl decomposition
 plot(stl(ts5,s.window="periodic"))
 ```
-Using stl decomposition to remove the seasonality and trend from the time series gives the above decomposition. Looking at the remainder it appears to now be random and not exhibiting any obvious periodicity or trend. 
+Using stl decomposition to remove the seasonality and trend from the time series gives the above decomposition. Looking at the remainder it appears to now be stationary and not exhibiting any obvious periodicity therefore the periodicity of 48 chosen appears to be correct. I also note that the trend component dosen't follow any clear pattern giving evidence that there isn't a trend component in the time series.
+
 
 ```{r}
-tmp <- stl(ts5,s.window="periodic")
-ts5_rem<-tmp$time.series[,3]
-x<-ts5_rem[1:150]
-y<-ts5_rem[151:300]
+plot(diff(tser05,lag=48))
+```
+After removing the seasonal component of the time series by differencing at a lag of 48 (frequency of 1 period), I plot this transformed time series. There is no clear observable trend to the transformed time series.
+
+```{r}
+acf(diff(tser05,lag=48))
+```
+Plotting a correglogram of the acf of the transformed time series it has a slow decrease in autocorrelation with increasing lag which suggests non-stationarity of the transformed time series. Therefore to obtain a stationary time series I difference the time series again at lag 1.
+
+```{r}
+plot(diff(diff(tser05,lag=48)))
+acf(diff(diff(tser05,lag=48)))
+```
+
+The resulting plot of this time series appears much more like a stationary time series and the acf correlogram now shows the autocorrelation quickly tails off giving evidence that this transformed time series is stationary.
+
+```{r}
+#transformed ts
+t_ts5<-diff(diff(tser05,lag=48))
+x<-t_ts5[1:144]
+y<-t_ts5[145:288]
 ks.test(x,y)
 ```
-Extracting the remainder component from the stl object and performing a Kolmogorov-Smirnov test gives a non-significant p-value however I note it is very close to being significant.
-
-To remove the trend and seasonal component take the difference at lag 48 to remove the periodicity and then difference at lag 1 to remove the trend. Then I analyse this transformed time series.
+Performing a Kolmogorov-Smirnov test on the transformed time series gives a non-significant p-value of 0.296 giving more evidence that the time series is now stationary after differencing at lag 48 and again at lag 1. Therefore I conclude that this time series is stationary and the original time series is ARIMA process with d=1 and seasonal component with a frequency of 48. I now analysis the non-seasonal component of this time series.
 
 ```{r}
-#transforming time series
-t_ts5<-diff(diff(tser05),lag=48)
-
-#correlograms of transformed ts
+#correlograms
 par(mfrow=c(1,2))
 acf(t_ts5)
 pacf(t_ts5)
 ```
-Both the acf and partial acf correlograms appear to exhibit sinusoidal dampening therefore start by fitting a ARIMA(1,0,1) model to the transformed time series data.
+
+Viewing the correlograms of the transformed time series both the acf and pacf appear to exhibit sinusoidal dampening. Therefore both p and q are greater than 0 as the stationary time series is an ARMA model. I start by trying to fit an ARIMA(1,1,1) model to the time series with seasonality removed (original time series differenced at a lag of 48).
 
 ```{r}
-#model fitting for parameter estimation
-fit_ts5<- arima(t_ts5,order=c(1,0,1))
-
-print(fit_ts5)
+#removing seasonal component
+t_ts5_2<-diff(tser05,lag=48)
+#fitting model
+fit_ts5<- arima(t_ts5_2,order=c(1,1,1))
 tsdiag(fit_ts5)
 ```
-Diagnostic plots shows that there is evidence of time structure not explained by the model as evidence of autocorrelation between residuals and significant p-values for Ljung-Box statistic  meaning we reject the null hypothesis that the autocorrelation function is zero at lags 2 and greater.
 
-Therefore I revise the model first inceasing q to be 2.
+Fitting an ARIMA(1,1,1) model and producing the above diagnostic plots for the model shows that there is evidence of autocorrelation between residuals and the Ljung-Box statistic p-values are significant for lag 2 and above, therefore there is some time structure/s not captured by the current model in the data.
 
 ```{r}
-fit_ts5_2<-arima(t_ts5,order=c(1,0,2))
-
-print(fit_ts5_2)
+fit_ts5_2<-arima(t_ts5_2,order=c(2,1,1))
 tsdiag(fit_ts5_2)
 ```
-
-The diagnostic plots for the ARIMA(1,0,2) model fitted to the transformed time series look much better with no pattern apparent in the residuals and no evidence of autocorrelation between residuals. The Ljung-Box p-values are all also consistently high.
+Fitting an ARIMA(2,1,1) model the diagnostic plots still show there is some time structure/s not captured by the this model in the data for same reasons as ARIMA(1,1,1) models diagnostic plots.
+```{r}
+fit_ts5_3<-arima(t_ts5_2,order=c(1,1,2))
+tsdiag(fit_ts5_3)
+```
+Fitting an ARIMA(1,1,2) model the diagnostic plots now show that there is no clear patterns in the residuals, no evidence of autocorrelation between residuals and the p-values for the Ljung-Box statistic are consistently high. Therefore these diagnostics give no evidence that there is some time structure not captured by this model that is present in the data.
 
 ```{r}
-#CI for parameters
-
+#CI for parameters of model
 #CI for alpha 1
-se_1<- sqrt(fit_ts5_2$var.coef[1,1])
-print(c(fit_ts5_2$coef[1]-2*se_1,fit_ts5_2$coef[1]+2*se_1))
+se_1<- sqrt(fit_ts5_3$var.coef[1,1])
+print(c(fit_ts5_3$coef[1]-2*se_1,fit_ts5_3$coef[1]+2*se_1))
 #alpha 1 significantly different from 0
 
 #CI for beta 1
-se_2<- sqrt(fit_ts5_2$var.coef[2,2])
-print(c(fit_ts5_2$coef[2]-2*se_2,fit_ts5_2$coef[2]+2*se_2))
+se_2<- sqrt(fit_ts5_3$var.coef[2,2])
+print(c(fit_ts5_3$coef[2]-2*se_2,fit_ts5_3$coef[2]+2*se_2))
 #beta 1 significantly different from 0
 
 #CI for beta 2
-se_3<- sqrt(fit_ts5_2$var.coef[3,3])
-print(c(fit_ts5_2$coef[3]-2*se_3,fit_ts5_2$coef[3]+2*se_3))
-#beta 2 significantly different from 0
-
+se_3<- sqrt(fit_ts5_3$var.coef[3,3])
+print(c(fit_ts5_3$coef[3]-2*se_3,fit_ts5_3$coef[3]+2*se_3))
 ```
-Calculating the 95% confidence intervals for the 3 parameters being estimated gave the intervals above. All parameters are significant as all don't include 0.
 
-I now calculate higher order p and q models as an extra check that the ARIMA(1,0,2) process is the best fit for the transformed time series.
+Producing 95% confidence intervals for the models estimated parameters, I find that none of them include 0, therefore all 3 parameters are significant. 
 
 ```{r}
-#p=2, q=2
-fit_ts5_3<-arima(t_ts5,order=c(2,0,2))
+#AIC of ARIMA()
+AIC(fit_ts5_3)
+#producing AIC of all higher order models
+AIC(arima(t_ts5_2,order=c(2,1,2)))
+AIC(arima(t_ts5_2,order=c(2,1,3)))
+AIC(arima(t_ts5_2,order=c(3,1,2)))
+AIC(arima(t_ts5_2,order=c(3,1,3)))
+```
 
+Producing the AIC of all higher order models only the ARIMA(2,1,2) model has a lower AIC compared to the ARIMA(1,1,2) model therefore I investigate this model as it having a lower AIC indicates it could be a better model for the data.
+
+```{r}
+#fitting ARIMA(2,1,2) model
+fit_ts5_4<-arima(t_ts5_2,order=c(2,1,2))
+
+#producing CI for alpha_2
 #CI for alpha 2
-se_2<- sqrt(fit_ts5_3$var.coef[2,2])
-print(c(fit_ts5_3$coef[2]-2*se_2,fit_ts5_3$coef[2]+2*se_2))
+se_2<- sqrt(fit_ts5_4$var.coef[2,2])
+print(c(fit_ts5_4$coef[2]-2*se_2,fit_ts5_4$coef[2]+2*se_2))
+#beta 1 significantly different from 0
 ```
-Calculating the $\alpha_2$ 95% confidence interval for a ARIMA(2,0,2) model fitted to the transformed time series data gave an interval that included 0, therefore the $\alpha_2$ term is insignificant.
+
+After fitting the ARIMA(2,1,2) model to the data the $\alpha_2$ parameter estimate is insignificant as its 95% confidence interval includes zero. Therefore this model is no different to the ARIMA(1,1,2) model.
 
 ```{r}
-#p=1, q=3
-fit_ts5_4<-arima(t_ts5,order=c(1,0,3))
-
-#CI for beta 3
-se_4<- sqrt(fit_ts5_3$var.coef[4,4])
-print(c(fit_ts5_4$coef[4]-2*se_4,fit_ts5_3$coef[4]+2*se_4))
+print(fit_ts5_3)
 ```
-Calculating the $\beta_3$ 95% confidence interval for a ARIMA(1,0,3) model fitted to the transformed time series data gave an interval that included 0, therefore the $\beta_3$ term is insignificant.
-
-```{r}
-#p=3, q=2
-fit_ts5_5<-arima(t_ts5,order=c(3,0,2))
-
-#CI for alpha 2
-se_2<- sqrt(fit_ts5_5$var.coef[2,2])
-print(c(fit_ts5_5$coef[2]-2*se_2,fit_ts5_5$coef[2]+2*se_2))
-
-#CI for alpha 3
-se_3<- sqrt(fit_ts5_5$var.coef[3,3])
-print(c(fit_ts5_5$coef[3]-2*se_3,fit_ts5_5$coef[3]+2*se_3))
-```
-Fitting a ARIMA(3,0,2) model to the data gives an insignificant $\alpha_3$ parameter as the 95% confidence interval included 0.
-
-Thus as the parameters in higher order models are insignificant, I conclude that the ARIMA(1,0,2) is the best fitting model for the transformed time series. Therefore the original time series is an ARIMA(1,0,2) model with estimated parameters $\alpha_1=-0.21$, $\beta_1=-0.77$ and $\beta_2=0.11$. With a period of 48 and trend component.
 
 
-```{r}
-#proof that model needs to be fitted with d=1 once removed seasonality
-fit_test<-arima(diff(tser05,lag=48),order=c(2,1,2))
-print(fit_test)
-
-
-plot(diff(tser05,lag=48))
-t<-diff(tser05,lag=48)
-
-x<-t[1:120]
-y<-t[121:240]
-ks.test(x,y)
-
-acf(t)
-#either trend or d>0 so need to take the difference, but as no apparent linea trend in the data must be d=1 so remeber for modelling
-
-```
+Therefore, overall I conclude that this time series is an ARIMA(1,1,2) process with parameters estimated to be $\alpha_1=-0.2$, $\beta_1=-0.77$ and $\beta_2=0.93$ and a seasonal component with frequency equal to 48.
 
 
 ## TS 6
@@ -738,13 +726,7 @@ print(c(fit_ts6_5$coef[3]-2*se_3,fit_ts6_5$coef[3]+2*se_3))
 ```
 Fitting a ARIMA(3,2,2) model the $\alpha_3$ parameter is not significant as 95% confidence interval included 0.
 
-Therefore as the higher order p and q models have insignificant parameters the ARIMA(1,2,2) model is the best fitting model (as extra parameters no different from zero so shouldn't be included). Therefore this time series is an ARIMA(1,2,2) process with parameters estimated to be $\alpha_1=0.39$, $\beta_1=-0.92$ and $\beta_2=0.74$. and no seasonality.
-
-```{r}
-print(fit_ts6_2)
-
-print(arima(diff(diff(tser06),lag=),order=c(1,0,2)))
-```
+Therefore as the higher order p and q models have insignificant parameters the ARIMA(1,2,2) model is the best fitting model (as extra parameters no different from zero so shouldn't be included). Therefore this time series is an ARIMA(1,2,2) process with parameters estimated to be $\alpha_1=0.39$, $\beta_1=-0.92$ and $\beta_2=0.74$ and no seasonality.
 
 
 ## TS 7
