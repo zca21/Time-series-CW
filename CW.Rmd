@@ -587,56 +587,76 @@ Therefore, overall I conclude that this time series is an ARIMA(1,1,2) process w
 plot(tser06)
 ```
 
-Looking at the plot of time series 6, it appears exhibit the features of a d=2 ARIMA process as is a smooth curve
+Looking at the plot of time series 6, it appears exhibit the features of a d=2 ARIMA process as it is a smooth curve
 
 ```{r}
+test<-diff(tser06)
+plot(test)
+test
+
 plot(diff(tser06))
 plot(diff(diff(tser06)))
 
 t_ts6<-diff(diff(tser06))
 ```
 
+Viewing the plots after taking the first and second order difference it is clear that the time series is not stationary and still has a trend after the taking the first difference but the trend appears to of been eliminated after taking the second order difference. Therefore this backs up my original claims that the time series is an ARIMA process with d=2. Therefore I take the second order difference of the time series and analyse this transformed time series to try and identify the seasonality component of this time series.
+
 ```{r}
-ts6_period<-ts(tser06[1:240],start=0,end=(24-1/12),frequency=12)
+
+#take 2 differences to remove trend and use stl to examine which of the possible periods seem most likely 
+t_ts6<-diff(diff(tser06))
+
+#1 obs per month
+ts6_period<-ts(t_ts6[1:238],start=0,end=(24-3/12),frequency=12)
 tmp<-stl(ts6_period,s.window="periodic")
+plot(tmp)
+
 comps <- tmp$time.series
 plot(comps[,3])
-plot(diff(comps[,3]))
-plot(diff(diff(comps[,3])))
-plot(diff(diff(diff(comps[,3]))))
+acf(comps[,3],lag.max = 100)
 
-ts6_period<-ts(tser06[1:240],start=0,end=(5-(1/48)),frequency=48)
-plot(stl(ts6_period,s.window="periodic"))
+#4 obs per month
+ts6_period<-ts(t_ts6[1:238],start=0,end=(5-(3/48)),frequency=48)
 tmp<-stl(ts6_period,s.window="periodic")
+plot(tmp)
+
 comps <- tmp$time.series
 plot(comps[,3])
-plot(diff(comps[,3]))
-plot(diff(diff(comps[,3])))
-plot(diff(diff(diff(comps[,3]))))
+acf(comps[,3],lag.max = 100)
 
 
-ts6_period<-ts(tser06[1:240],start=0,end=(6-(1/60)),frequency=60)
-plot(stl(ts6_period,s.window="periodic"))
+#5 obs per month
+ts6_period<-ts(t_ts6[1:240],start=0,end=(4-(3/60)),frequency=60)
 tmp<-stl(ts6_period,s.window="periodic")
+plot(tmp)
+
 comps <- tmp$time.series
 plot(comps[,3])
-plot(diff(comps[,3]))
-plot(diff(diff(comps[,3])))
-plot(diff(diff(diff(comps[,3]))))
+acf(comps[,3],lag.max = 100)
 
-ts6_period<-ts(tser06[1:240],start=0,end=(10-(1/24)),frequency=24)
-plot(stl(ts6_period,s.window="periodic"))
+#2 obs per month
+ts6_period<-ts(tser06[1:240],start=0,end=(10-(3/24)),frequency=24)
 tmp<-stl(ts6_period,s.window="periodic")
+plot(tmp)
+
 comps <- tmp$time.series
 plot(comps[,3])
-plot(diff(comps[,3]))
-plot(diff(diff(comps[,3])))
-plot(diff(diff(diff(comps[,3]))))
-#stl decomposition
-
-
-ts6_period
+acf(comps[,3],lag.max = 100)
 ```
+
+Producing the stl decomposition for each possible frequency of period using the formula $nobs=12*nfreq*nyear$ as there are 240 combinations there are only 4 possible integer combinations of nfreq and n year (integers that make 20: (4,5),(10,2),(5,4),(1,20)) that give more than 1 period. Viewing the above plots the first triplet corresponding to nfreq=1 and nyear=20 appear to fit the data the best as the random component of the stl decomposition appears the stationary and the acf has no large spikes at high lag.
+
+```{r}
+#removing the seasonal component found to be 12
+t_ts6<-diff(diff(diff(tser06)),lag=12)
+acf(t_ts6)
+
+t_ts6<-diff(diff(tser06))
+acf(t_ts6)
+```
+
+
 
 After taking 1st difference the time series is clearly still not stationary but still cannot see any clear signs of periodicity so take another difference and then the time series appears stationary backing up my claim that it is a ARIMA d=2 process.
 Therefore to analyse the time series I take 2 differences of lag 1 and produce correlograms for this transformed time series in order to identify p and q.
