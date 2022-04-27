@@ -66,6 +66,15 @@ library(tseries)
 ```
 
 
+##Tests used in this coursework
+
+In this coursework I use several tests in the process of identifying my preffered model for the time series I analyse which I now mention in slighlty more detail about below.
+
+The two sample Kolmogorov–Smirnov test is used to identify if 2 samples of data came from the same distribution by testing the null hypothesis that the 2 samples came from a population with the same distribution. In the context of this coursework I use it to provide evidence that the time series being analysed has no trend component or heteroscasdticy (as if this was present in the time series this test would give a significant p-value). Therefore for time series with no seasonal component this test provides evidence that the time series is stationary.
+
+Ljung-Box statistic tests whether of not the autocorrelation function of a stationary process is zero. With a null hypothesis that $H_0: \rho(k)=0$ thus in the context of checking a models residuals, a non-significant p-value at lag k means I fail to reject the null hypothesis and thus there is no evidence from this test that there is autocorrelation between residuals at lag k. If this is true for all lags then it gives evidence that there is no autocorrelation between residuals and therefore the residuals are white noise.
+
+
 ## TS 1-4
 
 
@@ -73,26 +82,23 @@ library(tseries)
 #To initially investigate what ARIMA models ACF/PACF with d=1 would look like create some references
 
 arima111 <- arima.sim(n=10000,model=list(order=c(1,1,1),ma=c(0.8),ar=c(0.5)),sd=1)
+par(mfrow=c(2,1))
+plot(arima111)
 acf(arima111)
-pacf(arima111)
 
 arima211 <- arima.sim(n=10000,model=list(order=c(2,1,1),ma=c(0.6),ar=c(0.5,0.3)),sd=1)
+par(mfrow=c(2,1))
+plot(arima211)
 acf(arima211)
-pacf(arima211)
 
 arima212 <- arima.sim(n=10000,model=list(order=c(2,1,2),ma=c(0.8,0.2),ar=c(0.5,0.3)),sd=1)
+par(mfrow=c(2,1))
+plot(arima212)
 acf(arima212)
-pacf(arima212)
-# from above plots ius apparent that due to non stationarity of process when d=1 the correlgram has non decaying spikes for tau=integers thus can use this to identify time series with d=1 in first 4 time series
 
-
-#adf.test(arima212)
-
-#perform normal dickey-fuller test (k=0) as only want to know if 1st difference is unit root (as told d=0 or 1)
-#p-value significant so reject null hypothesis of the presence of a unit root and therefore the series is stationary (ie d=0 as if d=1 the process is non-stationary)
 ```
 
-First I created some simulated ARIMA processes with $d>0$, plotting their ACF and partial ACF correlograms which can be viewed above we see that the acf correlograms spikes do not decrease/ decrease gradually as lag increases. This is due to these time series being non-stationary as proven in lectures. Therefore for these first 4 time series when viewing the acf correlograms I am also checking for non-stationarity (acf correlograms spikes decrease gradually as lag increases) but do not mention this explicitly unless the plot does imply non-stationary of the time series.
+Before starting with to anaylse the time series I created some simulated ARIMA processes with $d=1$ and plotted the time series and their ACF correlograms which can be viewed above. We see that as expected these time series exhibit a trend and that the acf correlograms spikes do not decrease/ decrease gradually as lag increases. This is due to these time series being non-stationary as proven in lectures. Therefore throughout the coursework I use gradually decreasing spikes as the lag increases in acf correlgrams to be evidence for $d>0$ ARIMA processes and vice-versa if there is no such pattern in the acf correlogram that the time series isn't a ARIMA process with $d>0$ and therefore if there is no seasonal component in the time series being plottedthis provides evidence it is stationary.
 
 
 #TS 1
@@ -457,8 +463,7 @@ plot(arima221)
 arima222 <- arima.sim(n=10000,model=list(order=c(2,2,2),ma=c(0.8,0.2),ar=c(0.5,0.3)),sd=2)
 plot(arima222)
 ```
-From the above simulations I note that ARIMA processes with $d=2$ when plot appear to be smooth curves, thus for time series plots that appear like this, they are likely ARIMA processes with d=2 and therefore need to be to be differenced twice to get a stationary time series.
-
+I create some simulated ARIMA processes with $d=2$ and produce there plots which can be viewed above. As these plots all appear to be smooth curves, I note that if time series plots appear to be smooth curves it gives an indication they are ARIMA processes with d equal to 2 in this section therefore they will need to be to be differenced twice to provide a stationary time series.
 
 
 #TS 5
@@ -550,7 +555,7 @@ print(c(fit_ts5_3$coef[3]-2*se_3,fit_ts5_3$coef[3]+2*se_3))
 Producing 95% confidence intervals for the models estimated parameters, I find that none of them include 0, therefore all 3 parameters are significant. 
 
 ```{r}
-#AIC of ARIMA()
+#AIC of ARIMA(1,1,2)
 AIC(fit_ts5_3)
 #producing AIC of all higher order models
 AIC(arima(t_ts5_2,order=c(2,1,2)))
@@ -587,20 +592,21 @@ Therefore, overall I conclude that this time series is an ARIMA(1,1,2) process w
 plot(tser06)
 ```
 
-Looking at the plot of time series 6, it appears exhibit the features of a d=2 ARIMA process as it is a smooth curve
+Looking at the plot of time series 6, it appears exhibit the features of a d=2 ARIMA process as it is a smooth curve.
 
 ```{r}
-test<-diff(tser06)
-plot(test)
-test
-
+par(mfrow=c(2,1))
+#1st difference plot
 plot(diff(tser06))
+#second order difference plot
 plot(diff(diff(tser06)))
-
+#creating second order differenced time series
 t_ts6<-diff(diff(tser06))
 ```
 
-Viewing the plots after taking the first and second order difference it is clear that the time series is not stationary and still has a trend after the taking the first difference but the trend appears to of been eliminated after taking the second order difference. Therefore this backs up my original claims that the time series is an ARIMA process with d=2. Therefore I take the second order difference of the time series and analyse this transformed time series to try and identify the seasonality component of this time series.
+Viewing the plots after taking the first and second order difference it is clear that after taking the first difference that the time series is not stationary and still has a trend but after taking the second order difference the trend appears to of been eliminated. Therefore this backs up my original claims that the time series is an ARIMA process with d=2. I note now that there doesn't appear to be any obvious seasonality in the time series however we are told in the question that seasonality exists in time series 5-7. Thus it is likely the seasonal component has a small amplitude and thus to identify it I will use stl decomposition.
+
+Therefore I take the second order difference of the time series and analyse this transformed time series to try and identify the seasonal component of this time series.
 
 ```{r}
 
@@ -645,48 +651,58 @@ plot(comps[,3])
 acf(comps[,3],lag.max = 100)
 ```
 
-Producing the stl decomposition for each possible frequency of period using the formula $nobs=12*nfreq*nyear$ as there are 240 combinations there are only 4 possible integer combinations of nfreq and n year (integers that make 20: (4,5),(10,2),(5,4),(1,20)) that give more than 1 period. Viewing the above plots the first triplet corresponding to nfreq=1 and nyear=20 appear to fit the data the best as the random component of the stl decomposition appears the stationary and the acf has no large spikes at high lag.
+Producing the stl decomposition for each possible frequency of period found by using the formula $nobs=12*nfreq*nyear$. As there are 240 observations there are only 4 possible integer combinations of nfreq and nyear which are (4,5),(10,2),(5,4) and (1,20)) that give more than 1 period. Viewing the above plots the first triplet corresponding to nfreq=1 and nyear=20 appears to fit the data the best as the random component of the stl decomposition appears stationary and the acf correlogram doesn't have a wavelike appearance thus the seasonality has been removed.
+
+Therefore I conclude that the time series has a frequency of 12.
 
 ```{r}
 #removing the seasonal component found to be 12
 t_ts6<-diff(diff(diff(tser06)),lag=12)
 acf(t_ts6)
 
-t_ts6<-diff(diff(tser06))
-acf(t_ts6)
+#ks test
+x<-t_ts6[1:113]
+y<-t_ts6[114:226]
+ks.test(x,y)
+
 ```
+Performing a Kolmogorov-Smirnov test on the transformed time series (differenced at lag 12 to remove seasonality and then differenced at lag 1 twice to remove the trend) gives a non-significant p-value of 0.55 indicating that the time series is stationary. The acf also appears to reduce sinusoidally as although it has a spike at lag 12 this is likely some residual seasonality still present in the transformed time series. Therefore I conclude that the transformed time series is stationary and the original time series is an ARIMA process with d=2 and seasonality of frequency 12.
 
-
-
-After taking 1st difference the time series is clearly still not stationary but still cannot see any clear signs of periodicity so take another difference and then the time series appears stationary backing up my claim that it is a ARIMA d=2 process.
-Therefore to analyse the time series I take 2 differences of lag 1 and produce correlograms for this transformed time series in order to identify p and q.
 
 ```{r}
-#transformed time series
-t_ts6<-diff(diff(tser06))
 #producing correlograms
 acf(t_ts6,lag.max = 100)
 pacf(t_ts6)
-plot(t_ts6)
-#17 or 18
-
-acf(diff(t_ts6,lag=17),lag.max = 100)
 ```
-Both the acf and partial acf correlograms appear to be decaying sinusoidally thus initially try to fit a ARIMA(1,2,1) model to the original time series data
+Both the acf and partial acf correlograms appear to be decaying sinusoidally giving evidence that the transformed time series is an ARMA process thus initially I try to fit a ARIMA(1,2,1) model to the original time series data.
 
 ```{r}
-fit_ts6<- arima(tser06,order=c(1,2,1))
+
+
+fit_ts6<- arima(diff(tser06,lag=12),order=c(1,2,1))
 tsdiag(fit_ts6)
 ```
-Fitting a ARIMA(1,2,1) model and looking at the diagnostic plots there is evidence of autocorrelation between the residuals and the p-values for teh Ljung-Box statistic are significant for lag 2 and greater. This indicates there is still some time structure in the data that the model isn't accounting for. Therefore I try higher order p and q models.
+Fitting a ARIMA(1,2,1) model and looking at the diagnostic plots there is evidence of autocorrelation between the residuals and the p-values for the Ljung-Box statistic are significant for lag 2 and greater. This indicates there is still some time structure in the data that the model isn't accounting for. Therefore I try higher order p and q models.
 
 
 ```{r}
 #fitting p-=1 q=2 model
-fit_ts6_2<- arima(tser06,order=c(1,2,2))
+fit_ts6_2<- arima(diff(tser06,lag=12),order=c(1,2,2))
 tsdiag(fit_ts6_2)
 ```
-All diagnostic plots for this fitted model don't show any causes for concern with no pattern to the residuals, no evidence of autocorrelation and consistently high p-values for Ljung-Box statistic.
+
+
+
+ All diagnostic plots for this fitted model don't show any causes for concern with no pattern to the residuals, no evidence of autocorrelation and consistently high p-values for Ljung-Box statistic.
+
+
+```{r}
+#fitting p-=1 q=2 model
+fit_ts6_2<- arima(diff(tser06,lag=12),order=c(2,1,3))
+tsdiag(fit_ts6_2)
+```
+
+
 ```{r}
 print(fit_ts6_2)
 ```
@@ -881,7 +897,7 @@ arima232 <- arima.sim(n=10000,model=list(order=c(2,3,2),ma=c(0.8,0.2),ar=c(0.5,0
 plot(arima232)
 
 ```
-Producing some simulations of ARIMA processes with d=3, they exhibit smooth curves when plotted.
+Producing some simulations of ARIMA processes with d=3 which I plotted above. I see they also look like smooth curves thus for time series that appear to be smooth curves it gives an indication they are ARIMA processes with either d=2 or d=3 in this section and therefore will need to be differenced either twice or three times to get a stationary series.
 
 
 ## TS 8
@@ -1001,15 +1017,8 @@ x<-t_ts9[1:50]
 y<-t_ts9[51:100]
 ks.test(x,y)
 ```
-Performing a Kolmogorov-Smirnov test gives a non significant p-value of 0.184 giving further evidence the transformed time series data is stationary. Thus as all evidence supports the taking the 1st difference twice on the time series data produces a stationary time series, I take the time series data as an ARIMA process with d=2.
+Performing a Kolmogorov-Smirnov test gives a non significant p-value of 0.184 giving further evidence the transformed time series data is stationary. Thus as all evidence supports the taking the second order difference of the time series data produces a stationary time series. Therefore as this is the minimum number of differences that is producing a stationary time series to avoid potential overdifferencing I assume the time series is a ARIMA d=2 process and now proceed to analyse the acf and pacf correolgrams of the time series after applying a second order difference.
 
-```{r}
-acf(diff(t_ts9))
-```
-
-I also note that the correlogram of the third differenced time series has an lag 1 autocorrelation of -0.5 which is an indication the series may be overdifferenced  as mentioned in (Ming Chun Chang & David A. Dickey, 1994. "Recognizing Overdifferenced Time Series," Journal of Time Series Analysis, Wiley Blackwell, vol. 15(1), pages 1-18, January.)
-
-Therefore I assume the time series is an ARIMA d=2 model so I now analyses the acf and pacf of the second-order differenced time series.
 
 ```{r}
 acf(t_ts9,lag.max = 50)
