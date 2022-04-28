@@ -869,6 +869,8 @@ plot(arima232)
 ```
 Producing some simulations of ARIMA processes with d=3 which I plotted above. I see they also look like smooth curves, thus for time series that appear to be smooth curves it gives an indication they are ARIMA processes with either d=2 or d=3 in this section and therefore will need to be differenced either twice or three times to get a stationary series.
 
+In these final three time series I assume no seasonal component exists in them.
+
 
 ## Time series 8
 
@@ -876,7 +878,7 @@ Producing some simulations of ARIMA processes with d=3 which I plotted above. I 
 plot(tser08)
 ```
 
-Looking at the plot for the eigth time series it appears to be none stationary, but does not exhibit any seasonality
+Looking at the plot for the eighth time series it appears to be none stationary.
 
 ```{r}
 acf(tser08)
@@ -914,7 +916,7 @@ fit_ts8<- arima(tser08,order=c(1,1,0))
 print(fit_ts8)
 tsdiag(fit_ts8)
 ```
-Model diagnostic plots for the ARIMA(1,1,0) model show no clear patterns in the residuals, no autocorrelation between the residuals and p-values for Ljung-Box statistic consistently high (non-significant) thus there is no evidence of a time structure/s not captured by the model that are predsent in the data. I also note that $\sigma=0.97$ thus is close to one one of the expected values of 1.
+Model diagnostic plots for the ARIMA(1,1,0) model show no clear patterns in the residuals, no autocorrelation between the residuals and p-values for Ljung-Box statistic consistently high (non-significant) thus there is no evidence of a time structure/s not captured by the model that are present in the data. I also note that $\sigma=0.97$ thus is close to one one of the expected values of 1.
 
 ```{r,warning=F}
 #function to calculate AIC of each model to identitfy any potentially better fitting models
@@ -986,7 +988,7 @@ x<-t_ts9[1:50]
 y<-t_ts9[51:100]
 ks.test(x,y)
 ```
-Performing a Kolmogorov-Smirnov test on the second order differenced time series gives a non significant p-value of 0.184 giving further evidence the transformed time series data is stationary. Thus as all evidence supports that taking the second order difference of the time series data produces a stationary time series. Therefore as this is the minimum number of differences that is producing a stationary time series to avoid potential overdifferencing I assume the time series is a ARIMA d=2 process and now proceed to analyse the acf and pacf correolgrams of the time series after applying a second order difference.
+Performing a Kolmogorov-Smirnov test on the second order differenced time series gives a non significant p-value of 0.184 giving further evidence the transformed time series data is stationary. Thus as all evidence supports that taking the second order difference of the time series data produces a stationary time series. Therefore as this is the minimum number of differences that is producing a stationary time series to avoid potential overdifferencing I assume the time series is a ARIMA d=2 process and now proceed to analyse the acf and pacf correlograms of the time series after applying a second order difference.
 
 
 ```{r}
